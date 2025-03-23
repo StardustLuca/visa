@@ -1,0 +1,10 @@
+[package]
+name = "visa"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+visa-bindings = { path = "visa-bindings" }
+thiserror = { version = "2.0" }
+bitflags = { version = "2.9" }
+regex = { version = "1.11" }
