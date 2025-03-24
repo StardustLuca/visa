@@ -2,9 +2,10 @@
 Ergonomic Rust bindings to a VISA (**V**irtual **I**nstrument **S**oftware **A**rchitecture) library.
 
 ## **Requirements**
-Being a binding it's required to have installed
+Being a binding crate it's required to have installed
 an implementation to a VISA library, for example
-[NI-VISA](https://www.ni.com/en/support/downloads/drivers/download.ni-visa.html#558610).
+[NI-VISA](https://www.ni.com/en/support/downloads/drivers/download.ni-visa.html#558610).  
+A C compiler is also needed (clang, for example). On Windows it can be easily obtained via Visual Studio.
 
 ## **Usage**
 ```TOML
@@ -30,6 +31,11 @@ let identification = instrument.query_identification().unwrap();
 
 println!("{:?}", identification);
 ```
+
+## **Cross Compilation**
+Sadly cross compilation is not yet possible due to the need of the library to link to a valid VISA library path at compile time. This means that if you're compiing
+on Linux for Windows, the library will attempt to find a VISA library at the
+path it would expect it to be on Windows.
 
 ## **License**
 ```

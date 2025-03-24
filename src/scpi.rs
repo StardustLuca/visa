@@ -36,69 +36,69 @@ impl FromStr for Identification {
 // Implement all common SCPI commands
 impl Instrument {
     pub fn query_identification(&mut self) -> Result<Identification> {
-        let response = self.query(b"*IDN?")?;
+        let response = self.query(b"*IDN?\n")?;
         Ok(response
             .parse()
             .map_err(|error| Error::InvalidIdentification(error))?)
     }
 
     pub fn reset(&mut self) -> Result<()> {
-        self.write("*RST")?;
+        self.write("*RST\n")?;
         Ok(())
     }
 
     pub fn query_self_test(&mut self) -> Result<()> {
-        let response = self.query(b"*TST?")?;
+        let response = self.query(b"*TST?\n")?;
         Ok(())
     }
 
     pub fn operation_complete(&mut self) -> Result<()> {
-        self.write("*OPC")?;
+        self.write("*OPC\n")?;
         Ok(())
     }
 
     pub fn query_operation_completed(&mut self) -> Result<()> {
-        let response = self.query(b"*OPC?")?;
+        let response = self.query(b"*OPC?\n")?;
         Ok(())
     }
 
     pub fn wait_on_complete(&mut self) -> Result<()> {
-        self.write("*WAI")?;
+        self.write("*WAI\n")?;
         Ok(())
     }
 
     pub fn clear_status(&mut self) -> Result<()> {
-        self.write("*CLS")?;
+        self.write("*CLS\n")?;
         Ok(())
     }
 
     pub fn event_status_enable(&mut self) -> Result<()> {
-        self.write("*ESE")?;
+        self.write("*ESE\n")?;
         Ok(())
     }
 
     pub fn query_event_status_enable(&mut self) -> Result<()> {
-        let response = self.query(b"*ESE?")?;
+        let response = self.query(b"*ESE?\n")?;
         Ok(())
     }
 
     pub fn query_event_status_register(&mut self) -> Result<()> {
-        let response = self.query(b"*ESR?")?;
+        let response = self.query(b"*ESR?\n")?;
         Ok(())
     }
 
     pub fn service_request_enable(&mut self) -> Result<()> {
-        self.write("*SRE")?;
+        self.write("*SRE\n")?;
         Ok(())
     }
 
     pub fn query_service_request_enable(&mut self) -> Result<()> {
-        let response = self.query(b"*SRE?")?;
+        let response = self.query(b"*SRE?\n")?;
         Ok(())
     }
 
     pub fn query_read_status_byte(&mut self) -> Result<()> {
-        let response = self.query(b"*STB?")?;
+        let response = self.query(b"*STB?\n")?;
         Ok(())
     }
 }

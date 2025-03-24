@@ -1,6 +1,6 @@
 use super::{
     AccessMode, AsBorrowedSession, AsViSession, Error, FromViSession, IntoViSession, OwnedSession,
-    Result, parse_vi_status, parse_vi_status_to_io,
+    Result, bindings::*, parse_vi_status, parse_vi_status_to_io,
 };
 use bitflags::bitflags;
 use std::{
@@ -10,7 +10,6 @@ use std::{
     str::FromStr,
     time::Duration,
 };
-use visa_bindings::*;
 
 bitflags! {
     pub struct FlushMode: ViUInt16 {
@@ -94,19 +93,19 @@ impl std::io::Read for &Instrument {
 }
 
 impl IntoViSession for Instrument {
-    fn into_vi_session(&self) -> visa_bindings::ViSession {
+    fn into_vi_session(&self) -> ViSession {
         self.0.into_vi_session()
     }
 }
 
 impl AsViSession for Instrument {
-    fn as_vi_session(&self) -> visa_bindings::ViSession {
+    fn as_vi_session(&self) -> ViSession {
         self.0.as_vi_session()
     }
 }
 
 impl FromViSession for Instrument {
-    unsafe fn from_vi_session(session: visa_bindings::ViSession) -> Self {
+    unsafe fn from_vi_session(session: ViSession) -> Self {
         unsafe { Self(FromViSession::from_vi_session(session)) }
     }
 }

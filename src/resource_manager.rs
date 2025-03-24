@@ -1,6 +1,7 @@
-use crate::{instrument, scpi::Identification};
-
-use super::{AsViSession, Error, FromViSession, Instrument, OwnedSession, Result, parse_vi_status};
+use super::{
+    AsViSession, Error, FromViSession, Instrument, OwnedSession, Result, bindings::*, instrument,
+    parse_vi_status, scpi::Identification,
+};
 use bitflags::bitflags;
 use regex::Regex;
 use std::{
@@ -8,7 +9,6 @@ use std::{
     str::FromStr,
     time::Duration,
 };
-use visa_bindings::*;
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

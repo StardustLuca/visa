@@ -1,5 +1,5 @@
+use super::bindings::*;
 use thiserror::Error;
-use visa_bindings::*;
 
 pub type Result<T> = core::result::Result<T, Error>;
 

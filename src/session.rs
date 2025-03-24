@@ -1,5 +1,5 @@
+use super::bindings::*;
 use std::marker::PhantomData;
-use visa_bindings::{ViSession, viClose};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OwnedSession {

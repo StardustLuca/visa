@@ -65,9 +65,9 @@ fn get_instrument_with_identification() {
 
     let mut instrument = resource_manager
         .open_with_identification(
-            "manufacturer",
-            "model",
-            "serial_number",
+            "RS PRO",
+            "IDM-8341",
+            "827B070G2",
             AccessMode::NO_LOCK,
             Scope::Local,
             Duration::from_secs(0),
