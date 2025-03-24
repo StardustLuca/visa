@@ -115,7 +115,7 @@ pub trait AsResourceManager: AsViSession {
         let collection = resources
             .into_iter()
             .filter_map(|resource| {
-                self.open_with_expression(&resource, AccessMode::NO_LOCK, Duration::from_secs(0))
+                self.open(&resource, AccessMode::NO_LOCK, Duration::from_secs(0))
                     .ok()
                     .and_then(|mut instrument| {
                         instrument
@@ -129,7 +129,7 @@ pub trait AsResourceManager: AsViSession {
         Ok(collection)
     }
 
-    fn open_with_expression(
+    fn open(
         &self,
         resource: &str,
         access_mode: AccessMode,
@@ -150,6 +150,27 @@ pub trait AsResourceManager: AsViSession {
         Ok(unsafe { Instrument::from_vi_session(instrument) })
     }
 
+    fn open_with_resource(
+        &self,
+        resource: &str,
+        access_mode: AccessMode,
+        scope: Scope,
+        timeout: Duration,
+    ) -> Result<Instrument> {
+        let matching_resource = resource;
+        let resources = self.get_resources_with_scope(scope)?;
+
+        for resource in resources {
+            if matching_resource == resource {
+                let instrument = self.open(&resource, access_mode, timeout)?;
+
+                return Ok(instrument);
+            }
+        }
+
+        Err(Error::InstrumentNotFound)
+    }
+
     fn open_with_identification(
         &self,
         manufacturer: &str,
@@ -162,7 +183,7 @@ pub trait AsResourceManager: AsViSession {
         let resources = self.get_resources_with_scope(scope)?;
 
         for resource in resources {
-            let instrument = self.open_with_expression(&resource, access_mode, timeout);
+            let instrument = self.open(&resource, access_mode, timeout);
 
             let mut instrument = match instrument {
                 Ok(instrument) => instrument,

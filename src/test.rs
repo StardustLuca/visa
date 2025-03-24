@@ -11,11 +11,8 @@ fn get_instruments_with_expression() {
     println!("{:?}", resources);
 
     for resource in &resources {
-        let instrument = resource_manager.open_with_expression(
-            resource,
-            AccessMode::NO_LOCK,
-            Duration::from_secs(0),
-        );
+        let instrument =
+            resource_manager.open(resource, AccessMode::NO_LOCK, Duration::from_secs(0));
 
         println!("{}", resource);
         match instrument {
@@ -40,11 +37,8 @@ fn get_instruments_with_scope() {
     println!("{:?}", resources);
 
     for resource in resources {
-        let instrument = resource_manager.open_with_expression(
-            &resource,
-            AccessMode::NO_LOCK,
-            Duration::from_secs(0),
-        );
+        let instrument =
+            resource_manager.open(&resource, AccessMode::NO_LOCK, Duration::from_secs(0));
 
         println!("{}", resource);
         match instrument {
