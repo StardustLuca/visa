@@ -51,7 +51,7 @@ impl AsViSession for Session {
 impl IntoViSession for Session {
     fn into_vi_session(self) -> ViSession {
         let session = self.session;
-        std::mem::forget(self);
+        drop(self);
         session
     }
 }
