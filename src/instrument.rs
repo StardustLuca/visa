@@ -93,7 +93,7 @@ impl std::io::Read for &Instrument {
 }
 
 impl IntoViSession for Instrument {
-    fn into_vi_session(&self) -> ViSession {
+    fn into_vi_session(self) -> ViSession {
         self.0.into_vi_session()
     }
 }
