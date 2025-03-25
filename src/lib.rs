@@ -11,4 +11,5 @@ use bindings::*;
 pub use error::*;
 pub use instrument::*;
 pub use resource_manager::*;
+pub use scpi::*;
 pub use session::*;
