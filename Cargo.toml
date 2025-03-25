@@ -3,10 +3,17 @@ name = "visa"
 version = "0.1.2"
 edition = "2024"
 
+[features]
+mock = []
+
 [dependencies]
-thiserror = { version = "2.0" }
-bitflags = { version = "2.9" }
-regex = { version = "1.11" }
+thiserror = "2.0"
+bitflags = "2.9"
+regex = "1.11"
+tracing = "0.1.41"
 
 [build-dependencies]
-bindgen = { version = "0.71" }
+bindgen = "0.71"
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

@@ -36,10 +36,23 @@ impl FromStr for Identification {
 // Implement all common SCPI commands
 impl Instrument {
     pub fn query_identification(&mut self) -> Result<Identification> {
-        let response = self.query(b"*IDN?\n")?;
-        Ok(response
-            .parse()
-            .map_err(|error| Error::InvalidIdentification(error))?)
+        #[cfg(not(feature = "mock"))]
+        {
+            let response = self.query(b"*IDN?\n")?;
+            Ok(response
+                .parse()
+                .map_err(|error| Error::InvalidIdentification(error))?)
+        }
+
+        #[cfg(feature = "mock")]
+        {
+            Ok(Identification {
+                manufacturer: "Fake Company Inc.".into(),
+                model: "Fake Deviceinator".into(),
+                serial_number: "3000".into(),
+                firmware_version: "2.40.69".into(),
+            })
+        }
     }
 
     pub fn reset(&mut self) -> Result<()> {

@@ -39,8 +39,8 @@ pub enum VisaError {
         "Insufficient location information or the device or resource is not present in the system."
     )]
     ResourceNotFound = VI_ERROR_RSRC_NFOUND,
-    /// Invalid resource reference specified. Parsing error.
-    #[error("Invalid resource reference specified. Parsing error.")]
+    /// Invalid resource reference specified.
+    #[error("Invalid resource reference specified.")]
     InvalidResourceName = VI_ERROR_INV_RSRC_NAME,
     /// Invalid access mode.
     #[error("Invalid access mode.")]
@@ -294,6 +294,7 @@ pub enum VisaError {
     NoPermission = VI_ERROR_NPERMISSION,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 #[repr(u32)]
 pub enum Status {
     /// Operation completed successfully

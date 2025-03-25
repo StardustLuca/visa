@@ -1,30 +1,31 @@
-use super::bindings::*;
-use std::marker::PhantomData;
+use super::{bindings::*, parse_vi_status};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct OwnedSession {
+pub struct Session {
     session: ViSession,
 }
 
-impl Drop for OwnedSession {
+impl Drop for Session {
     fn drop(&mut self) {
-        unsafe {
-            viClose(self.session);
+        #[cfg(not(feature = "mock"))]
+        {
+            unsafe {
+                let status = viClose(self.session);
+                match parse_vi_status(status) {
+                    Ok(status) => {
+                        tracing::debug!("viClose result: {:?}", status)
+                    }
+                    Err(error) => {
+                        tracing::debug!("viClose result: {}", error)
+                    }
+                }
+            }
         }
-    }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BorrowedSession<'a> {
-    session: ViSession,
-    _phantom: PhantomData<&'a ViSession>,
-}
-
-impl BorrowedSession<'_> {
-    pub unsafe fn borrow_vi_session(session: ViSession) -> Self {
-        Self {
-            session,
-            _phantom: PhantomData,
+        #[cfg(feature = "mock")]
+        {
+            let count = super::SESSION_COUNT.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+            tracing::debug!("SESSION_COUNT: {}", count);
         }
     }
 }
@@ -41,23 +42,13 @@ pub trait IntoViSession {
     fn into_vi_session(&self) -> ViSession;
 }
 
-pub trait AsBorrowedSession {
-    fn as_borrowed_session(&self) -> BorrowedSession<'_>;
-}
-
-impl AsViSession for BorrowedSession<'_> {
+impl AsViSession for Session {
     fn as_vi_session(&self) -> ViSession {
         self.session
     }
 }
 
-impl AsViSession for OwnedSession {
-    fn as_vi_session(&self) -> ViSession {
-        self.session
-    }
-}
-
-impl IntoViSession for OwnedSession {
+impl IntoViSession for Session {
     fn into_vi_session(&self) -> ViSession {
         let session = self.session;
         std::mem::forget(self);
@@ -65,36 +56,8 @@ impl IntoViSession for OwnedSession {
     }
 }
 
-impl FromViSession for OwnedSession {
+impl FromViSession for Session {
     unsafe fn from_vi_session(session: ViSession) -> Self {
         Self { session }
-    }
-}
-
-impl<T: AsBorrowedSession> AsBorrowedSession for &T {
-    #[inline]
-    fn as_borrowed_session(&self) -> BorrowedSession<'_> {
-        T::as_borrowed_session(self)
-    }
-}
-
-impl<T: AsBorrowedSession> AsBorrowedSession for &mut T {
-    #[inline]
-    fn as_borrowed_session(&self) -> BorrowedSession<'_> {
-        T::as_borrowed_session(self)
-    }
-}
-
-impl AsBorrowedSession for BorrowedSession<'_> {
-    #[inline]
-    fn as_borrowed_session(&self) -> BorrowedSession<'_> {
-        *self
-    }
-}
-
-impl AsBorrowedSession for OwnedSession {
-    #[inline]
-    fn as_borrowed_session(&self) -> BorrowedSession<'_> {
-        unsafe { BorrowedSession::borrow_vi_session(self.session) }
     }
 }

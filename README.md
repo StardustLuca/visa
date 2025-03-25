@@ -21,7 +21,7 @@ let mut instrument = resource_manager
         "manufacturer",
         "model",
         "serial_number",
-        AccessMode::NO_LOCK,
+        AccessMode::EXCLUSIVE_LOCK,
         Scope::Local,
         Duration::from_secs(0),
     )

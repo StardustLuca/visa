@@ -1,6 +1,6 @@
 use super::{
-    AsViSession, Error, FromViSession, Instrument, OwnedSession, Result, bindings::*, instrument,
-    parse_vi_status, scpi::Identification,
+    AsViSession, Error, FromViSession, Instrument, Result, Session, bindings::*, parse_vi_status,
+    scpi::Identification,
 };
 use bitflags::bitflags;
 use regex::Regex;
@@ -27,15 +27,20 @@ pub enum Scope {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct ResourceManager(OwnedSession);
+pub struct ResourceManager(Session);
 
 impl ResourceManager {
     pub fn new() -> Result<Self> {
+        #[cfg(feature = "mock")]
+        {
+            super::SESSION_COUNT.store(0, std::sync::atomic::Ordering::Relaxed);
+        }
+
         let mut session: ViSession = 0;
         unsafe {
             let status = viOpenDefaultRM(&mut session as _);
             parse_vi_status(status)?;
-            Ok(Self(OwnedSession::from_vi_session(session)))
+            Ok(Self(Session::from_vi_session(session)))
         }
     }
 }
@@ -137,16 +142,26 @@ pub trait AsResourceManager: AsViSession {
     ) -> Result<Instrument> {
         let resource = CString::from_str(resource).map_err(|_| Error::InvalidString)?;
         let mut instrument: ViSession = 0;
-        unsafe {
-            let status = viOpen(
-                self.as_vi_session(),
-                resource.as_ptr(),
-                access_mode.bits(),
-                timeout.as_millis() as _,
-                &mut instrument as _,
-            );
-            parse_vi_status(status)?;
+        #[cfg(not(feature = "mock"))]
+        {
+            unsafe {
+                let status = viOpen(
+                    self.as_vi_session(),
+                    resource.as_ptr(),
+                    access_mode.bits(),
+                    timeout.as_millis() as _,
+                    &mut instrument as _,
+                );
+                parse_vi_status(status)?;
+            }
         }
+
+        #[cfg(feature = "mock")]
+        {
+            let count = super::SESSION_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            tracing::debug!("SESSION_COUNT: {}", count);
+        }
+
         Ok(unsafe { Instrument::from_vi_session(instrument) })
     }
 
@@ -199,9 +214,17 @@ pub trait AsResourceManager: AsViSession {
             let model = Regex::new(model).map_err(|_| Error::InvalidString)?;
             let serial_number = Regex::new(serial_number).map_err(|_| Error::InvalidString)?;
 
-            if manufacturer.is_match(&identification.manufacturer)
-                && model.is_match(&identification.model)
-                && serial_number.is_match(&identification.serial_number)
+            #[cfg(not(feature = "mock"))]
+            {
+                if manufacturer.is_match(&identification.manufacturer)
+                    && model.is_match(&identification.model)
+                    && serial_number.is_match(&identification.serial_number)
+                {
+                    return Ok(instrument);
+                }
+            }
+
+            #[cfg(feature = "mock")]
             {
                 return Ok(instrument);
             }

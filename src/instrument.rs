@@ -1,6 +1,6 @@
 use super::{
-    AccessMode, AsBorrowedSession, AsViSession, Error, FromViSession, IntoViSession, OwnedSession,
-    Result, bindings::*, parse_vi_status, parse_vi_status_to_io,
+    AccessMode, AsViSession, Error, FromViSession, IntoViSession, Result, Session, bindings::*,
+    parse_vi_status, parse_vi_status_to_io,
 };
 use bitflags::bitflags;
 use std::{
@@ -25,10 +25,10 @@ bitflags! {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Instrument(pub(crate) OwnedSession);
+pub struct Instrument(pub(crate) Session);
 
 impl Deref for Instrument {
-    type Target = OwnedSession;
+    type Target = Session;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -110,11 +110,11 @@ impl FromViSession for Instrument {
     }
 }
 
-impl AsBorrowedSession for Instrument {
-    fn as_borrowed_session(&self) -> crate::session::BorrowedSession<'_> {
-        self.0.as_borrowed_session()
-    }
-}
+// impl AsBorrowedSession for Instrument {
+//     fn as_borrowed_session(&self) -> crate::session::BorrowedSession<'_> {
+//         self.0.as_borrowed_session()
+//     }
+// }
 
 impl Instrument {
     pub fn query(&mut self, buf: impl AsRef<[u8]>) -> Result<String> {

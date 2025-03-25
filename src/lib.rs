@@ -7,6 +7,10 @@ mod session;
 #[cfg(test)]
 mod test;
 
+#[cfg(feature = "mock")]
+static SESSION_COUNT: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
+
+#[allow(unused_imports)]
 use bindings::*;
 pub use error::*;
 pub use instrument::*;

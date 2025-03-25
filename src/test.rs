@@ -1,5 +1,5 @@
 use crate::resource_manager::{AccessMode, AsResourceManager, ResourceManager, Scope};
-use std::time::Duration;
+use std::{thread::sleep, time::Duration};
 
 #[test]
 fn get_instruments_with_expression() {
@@ -12,7 +12,7 @@ fn get_instruments_with_expression() {
 
     for resource in &resources {
         let instrument =
-            resource_manager.open(resource, AccessMode::NO_LOCK, Duration::from_secs(0));
+            resource_manager.open(resource, AccessMode::EXCLUSIVE_LOCK, Duration::from_secs(0));
 
         println!("{}", resource);
         match instrument {
@@ -37,8 +37,11 @@ fn get_instruments_with_scope() {
     println!("{:?}", resources);
 
     for resource in resources {
-        let instrument =
-            resource_manager.open(&resource, AccessMode::NO_LOCK, Duration::from_secs(0));
+        let instrument = resource_manager.open(
+            &resource,
+            AccessMode::EXCLUSIVE_LOCK,
+            Duration::from_secs(0),
+        );
 
         println!("{}", resource);
         match instrument {
@@ -62,7 +65,7 @@ fn get_instrument_with_identification() {
             "RS PRO",
             "IDM-8341",
             "827B070G2",
-            AccessMode::NO_LOCK,
+            AccessMode::EXCLUSIVE_LOCK,
             Scope::Local,
             Duration::from_secs(0),
         )
@@ -71,4 +74,25 @@ fn get_instrument_with_identification() {
     let identification = instrument.query_identification().unwrap();
 
     println!("{:?}", identification);
+}
+
+#[test]
+fn session_stress_test() {
+    tracing_subscriber::fmt().with_env_filter("trace").init();
+    let resource_manager = ResourceManager::new().unwrap();
+
+    loop {
+        let mut instrument = resource_manager
+            .open(
+                "resource",
+                AccessMode::EXCLUSIVE_LOCK,
+                Duration::from_secs(0),
+            )
+            .unwrap();
+
+        let identification = instrument.query_identification().unwrap();
+
+        println!("{:?}", identification);
+        sleep(Duration::from_secs(1));
+    }
 }
