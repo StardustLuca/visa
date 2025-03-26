@@ -2,33 +2,17 @@ use super::{bindings::*, parse_vi_status};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Session {
-    session: ViSession,
+    pub(crate) inner: ViSession,
 }
 
-impl Drop for Session {
-    fn drop(&mut self) {
-        #[cfg(not(feature = "mock"))]
-        {
-            unsafe {
-                let status = viClose(self.session);
-                match parse_vi_status(status) {
-                    Ok(status) => {
-                        tracing::debug!("viClose result: {:?}", status)
-                    }
-                    Err(error) => {
-                        tracing::debug!("viClose result: {}", error)
-                    }
-                }
-            }
-        }
-
-        #[cfg(feature = "mock")]
-        {
-            let count = super::SESSION_COUNT.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
-            tracing::debug!("SESSION_COUNT: {}", count);
-        }
-    }
-}
+// impl Drop for Session {
+//     fn drop(&mut self) {
+//         unsafe {
+//             let status = viClose(self.as_vi_session());
+//             parse_vi_status(status).unwrap();
+//         }
+//     }
+// }
 
 pub trait AsViSession {
     fn as_vi_session(&self) -> ViSession;
@@ -44,13 +28,13 @@ pub trait IntoViSession {
 
 impl AsViSession for Session {
     fn as_vi_session(&self) -> ViSession {
-        self.session
+        self.inner
     }
 }
 
 impl IntoViSession for Session {
     fn into_vi_session(self) -> ViSession {
-        let session = self.session;
+        let session = self.inner;
         drop(self);
         session
     }
@@ -58,6 +42,6 @@ impl IntoViSession for Session {
 
 impl FromViSession for Session {
     unsafe fn from_vi_session(session: ViSession) -> Self {
-        Self { session }
+        Self { inner: session }
     }
 }

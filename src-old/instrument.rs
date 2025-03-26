@@ -1,8 +1,6 @@
 use super::{
-    bindings::*,
-    error::{Error, Result, VisaError, parse_vi_status, parse_vi_status_to_io},
-    resource_manager::AccessMode,
-    session::{AsViSession, FromViSession, IntoViSession, Session},
+    AccessMode, AsViSession, Error, FromViSession, IntoViSession, Result, Session, bindings::*,
+    parse_vi_status, parse_vi_status_to_io,
 };
 use bitflags::bitflags;
 use std::{
@@ -27,15 +25,13 @@ bitflags! {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Instrument {
-    pub(crate) inner: Session,
-}
+pub struct Instrument(pub(crate) Session);
 
 impl Deref for Instrument {
     type Target = Session;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        &self.0
     }
 }
 
@@ -98,25 +94,27 @@ impl std::io::Read for &Instrument {
 
 impl IntoViSession for Instrument {
     fn into_vi_session(self) -> ViSession {
-        self.inner.into_vi_session()
+        self.0.into_vi_session()
     }
 }
 
 impl AsViSession for Instrument {
     fn as_vi_session(&self) -> ViSession {
-        self.inner.as_vi_session()
+        self.0.as_vi_session()
     }
 }
 
 impl FromViSession for Instrument {
     unsafe fn from_vi_session(session: ViSession) -> Self {
-        unsafe {
-            Self {
-                inner: FromViSession::from_vi_session(session),
-            }
-        }
+        unsafe { Self(FromViSession::from_vi_session(session)) }
     }
 }
+
+// impl AsBorrowedSession for Instrument {
+//     fn as_borrowed_session(&self) -> crate::session::BorrowedSession<'_> {
+//         self.0.as_borrowed_session()
+//     }
+// }
 
 impl Instrument {
     pub fn query(&mut self, buf: impl AsRef<[u8]>) -> Result<String> {
@@ -137,14 +135,14 @@ impl Instrument {
         Ok(())
     }
 
-    pub fn status_description(&self, error: VisaError) -> Result<()> {
-        let mut buf = String::new();
-        unsafe {
-            let status = viStatusDesc(self.as_vi_session(), error as _, buf.as_mut_ptr() as _);
-            parse_vi_status(status)?;
-        }
-        Ok(())
-    }
+    // pub fn status_description(&self, error: VisaError) -> Result<()> {
+    //     let mut buf = String::new();
+    //     unsafe {
+    //         let status = viStatusDesc(self.as_vi_session(), error.into(), buf.as_mut_ptr() as _);
+    //         parse_vi_status(status)?;
+    //     }
+    //     Ok(())
+    // }
 
     pub fn lock(
         &self,

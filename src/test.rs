@@ -1,98 +1,33 @@
-use crate::resource_manager::{AccessMode, AsResourceManager, ResourceManager, Scope};
-use std::{thread::sleep, time::Duration};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
-#[test]
-fn get_instruments_with_expression() {
-    let resource_manager = ResourceManager::new().unwrap();
+use crate::{AccessMode, Instrument, ResourceManager};
 
-    let resources = resource_manager
-        .get_resources_with_expression("?*INSTR")
-        .unwrap();
-    println!("{:?}", resources);
+pub struct FakeInstrument3000 {
+    pub(crate) inner: Arc<Mutex<Instrument>>,
+}
 
-    for resource in &resources {
-        let instrument =
-            resource_manager.open(resource, AccessMode::EXCLUSIVE_LOCK, Duration::from_secs(0));
+impl FakeInstrument3000 {
+    pub fn new(inner: Arc<Mutex<Instrument>>) -> Self {
+        Self { inner }
+    }
 
-        println!("{}", resource);
-        match instrument {
-            Ok(mut instrument) => {
-                println!("opened");
-                let identification = instrument.query_identification().unwrap();
-
-                println!("{:?}", identification);
-            }
-            Err(e) => println!("{}", e),
-        }
+    pub fn instrument_specific_command(&self) {
+        let inner = self.inner.lock().unwrap();
     }
 }
 
 #[test]
-fn get_instruments_with_scope() {
-    let resource_manager = ResourceManager::new().unwrap();
+fn test() {
+    let mut resource_manager = ResourceManager::new().unwrap();
 
-    let resources = resource_manager
-        .get_resources_with_scope(Scope::Local)
-        .unwrap();
-    println!("{:?}", resources);
-
-    for resource in resources {
-        let instrument = resource_manager.open(
-            &resource,
-            AccessMode::EXCLUSIVE_LOCK,
-            Duration::from_secs(0),
-        );
-
-        println!("{}", resource);
-        match instrument {
-            Ok(mut instrument) => {
-                println!("opened");
-                let identification = instrument.query_identification().unwrap();
-
-                println!("{:?}", identification);
-            }
-            Err(e) => println!("{}", e),
-        }
-    }
-}
-
-#[test]
-fn get_instrument_with_identification() {
-    let resource_manager = ResourceManager::new().unwrap();
-
-    let mut instrument = resource_manager
-        .open_with_identification(
-            "RS PRO",
-            "IDM-8341",
-            "827B070G2",
-            AccessMode::EXCLUSIVE_LOCK,
-            Scope::Local,
-            Duration::from_secs(0),
-        )
+    let instrument = resource_manager
+        .open("ASRL12::INSTR", AccessMode::NO_LOCK, Duration::from_secs(0))
         .unwrap();
 
-    let identification = instrument.query_identification().unwrap();
+    let fake_instrument_3000 = FakeInstrument3000::new(instrument);
 
-    println!("{:?}", identification);
-}
-
-#[test]
-fn session_stress_test() {
-    tracing_subscriber::fmt().with_env_filter("trace").init();
-    let resource_manager = ResourceManager::new().unwrap();
-
-    loop {
-        let mut instrument = resource_manager
-            .open(
-                "resource",
-                AccessMode::EXCLUSIVE_LOCK,
-                Duration::from_secs(0),
-            )
-            .unwrap();
-
-        let identification = instrument.query_identification().unwrap();
-
-        println!("{:?}", identification);
-        sleep(Duration::from_secs(1));
-    }
+    fake_instrument_3000.instrument_specific_command();
 }
