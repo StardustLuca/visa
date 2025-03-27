@@ -1,8 +1,9 @@
 use super::{
+    Identification,
     bindings::*,
     error::{Error, Result, VisaError, parse_vi_status, parse_vi_status_to_io},
     resource_manager::AccessMode,
-    session::{AsViSession, FromViSession, IntoViSession, Session},
+    session::Session,
 };
 use bitflags::bitflags;
 use std::{
@@ -26,9 +27,10 @@ bitflags! {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug)]
 pub struct Instrument {
-    pub(crate) inner: Session,
+    inner: Session,
+    pub identification: Identification,
 }
 
 impl Deref for Instrument {
@@ -96,33 +98,29 @@ impl std::io::Read for &Instrument {
     }
 }
 
-impl IntoViSession for Instrument {
-    fn into_vi_session(self) -> ViSession {
-        self.inner.into_vi_session()
+impl Instrument {
+    pub fn new(session: Session) -> Result<Self> {
+        let mut instrument = Self {
+            inner: session,
+            identification: Identification {
+                manufacturer: "".into(),
+                model: "".into(),
+                serial_number: "".into(),
+                firmware_version: "".into(),
+            },
+        };
+        let identification = instrument.query_identification()?;
+        instrument.identification = identification;
+        Ok(instrument)
     }
-}
 
-impl AsViSession for Instrument {
-    fn as_vi_session(&self) -> ViSession {
+    pub fn as_vi_session(&self) -> ViSession {
         self.inner.as_vi_session()
     }
-}
 
-impl FromViSession for Instrument {
-    unsafe fn from_vi_session(session: ViSession) -> Self {
-        unsafe {
-            Self {
-                inner: FromViSession::from_vi_session(session),
-            }
-        }
-    }
-}
-
-impl Instrument {
-    pub fn query(&mut self, buf: impl AsRef<[u8]>) -> Result<String> {
-        self.write(buf)?;
-        let response = self.read()?;
-        Ok(response)
+    pub fn write(&mut self, buf: impl AsRef<[u8]>) -> Result<()> {
+        self.write_all(buf.as_ref())?;
+        Ok(())
     }
 
     pub fn read(&self) -> Result<String> {
@@ -132,9 +130,10 @@ impl Instrument {
         Ok(buf)
     }
 
-    pub fn write(&mut self, buf: impl AsRef<[u8]>) -> Result<()> {
-        self.write_all(buf.as_ref())?;
-        Ok(())
+    pub fn query(&mut self, buf: impl AsRef<[u8]>) -> Result<String> {
+        self.write(buf)?;
+        let response = self.read()?;
+        Ok(response)
     }
 
     pub fn status_description(&self, error: VisaError) -> Result<()> {

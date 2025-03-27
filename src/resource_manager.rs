@@ -2,7 +2,7 @@ use super::{
     bindings::*,
     error::{Error, Result, parse_vi_status},
     instrument::Instrument,
-    session::{AsViSession, FromViSession, Session},
+    session::Session,
 };
 use bitflags::bitflags;
 use regex::Regex;
@@ -32,8 +32,8 @@ bitflags! {
 
 #[derive(Debug)]
 pub struct ResourceManager {
-    pub(crate) inner: Session,
-    pub(crate) instruments: Arc<Mutex<HashMap<String, Arc<Mutex<Instrument>>>>>,
+    inner: Session,
+    pub(crate) instruments: HashMap<String, Arc<Mutex<Instrument>>>,
 }
 
 impl ResourceManager {
@@ -44,9 +44,20 @@ impl ResourceManager {
             parse_vi_status(status)?;
             Ok(Self {
                 inner: Session::from_vi_session(session),
-                instruments: Arc::new(Mutex::new(HashMap::new())),
+                instruments: HashMap::new(),
             })
         }
+    }
+
+    pub fn from_vi_session(session: ViSession) -> Self {
+        Self {
+            inner: Session::from_vi_session(session),
+            instruments: HashMap::new(),
+        }
+    }
+
+    pub fn as_vi_session(&self) -> ViSession {
+        self.inner.as_vi_session()
     }
 
     pub fn open(
@@ -55,10 +66,21 @@ impl ResourceManager {
         access_mode: AccessMode,
         timeout: Duration,
     ) -> Result<Arc<Mutex<Instrument>>> {
-        let mut instruments = self.instruments.lock().unwrap();
+        match self.instruments.get(resource) {
+            Some(instrument) => {
+                let identification = {
+                    let mut instrument = instrument.lock().unwrap();
+                    instrument.query_identification()
+                };
 
-        match instruments.get(resource) {
-            Some(instrument) => return Ok(instrument.clone()),
+                match identification {
+                    Ok(_) => Ok(instrument.clone()),
+                    Err(_) => {
+                        self.instruments.remove(resource);
+                        self.open(resource, access_mode, timeout)
+                    }
+                }
+            }
             None => {
                 let c_resource = CString::from_str(resource).map_err(|_| Error::InvalidString)?;
                 let mut session: ViSession = 0;
@@ -74,10 +96,12 @@ impl ResourceManager {
                     parse_vi_status(status)?;
                 }
 
-                let instrument =
-                    Arc::new(Mutex::new(unsafe { Instrument::from_vi_session(session) }));
+                let instrument = Arc::new(Mutex::new(Instrument::new(Session::from_vi_session(
+                    session,
+                ))?));
 
-                instruments.insert(resource.to_owned(), instrument.clone());
+                self.instruments
+                    .insert(resource.to_owned(), instrument.clone());
 
                 Ok(instrument)
             }
@@ -85,8 +109,7 @@ impl ResourceManager {
     }
 
     pub fn close(&mut self, resource: &str) -> Result<()> {
-        let mut instruents = self.instruments.lock().unwrap();
-        let instrument = instruents.remove(resource);
+        let instrument = self.instruments.remove(resource);
 
         match instrument {
             Some(instrument) => {
@@ -152,28 +175,7 @@ impl ResourceManager {
         }
     }
 
-    pub fn open_with_resource(
-        &mut self,
-        resource: &str,
-        access_mode: AccessMode,
-        scope: Scope,
-        timeout: Duration,
-    ) -> Result<Arc<Mutex<Instrument>>> {
-        let matching_resource = resource;
-        let resources = self.get_resources_with_scope(scope)?;
-
-        for resource in resources {
-            if matching_resource == resource {
-                let instrument = self.open(&resource, access_mode, timeout)?;
-
-                return Ok(instrument);
-            }
-        }
-
-        Err(Error::InstrumentNotFound)
-    }
-
-    fn open_with_identification(
+    pub fn open_with_identification(
         &mut self,
         manufacturer: &str,
         model: &str,
@@ -210,22 +212,5 @@ impl ResourceManager {
         }
 
         Err(Error::InstrumentNotFound)
-    }
-}
-
-impl AsViSession for ResourceManager {
-    fn as_vi_session(&self) -> ViSession {
-        self.inner.as_vi_session()
-    }
-}
-
-impl FromViSession for ResourceManager {
-    unsafe fn from_vi_session(session: ViSession) -> Self {
-        unsafe {
-            Self {
-                inner: FromViSession::from_vi_session(session),
-                instruments: Arc::new(Mutex::new(HashMap::new())),
-            }
-        }
     }
 }
