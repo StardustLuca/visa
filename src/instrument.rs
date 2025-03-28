@@ -1,6 +1,9 @@
 use super::{
-    AccessMode, AsViSession, Error, FromViSession, IntoViSession, Result, Session, bindings::*,
-    parse_vi_status, parse_vi_status_to_io,
+    Identification,
+    bindings::*,
+    error::{Error, Result, VisaError, parse_vi_status, parse_vi_status_to_io},
+    resource_manager::AccessMode,
+    session::Session,
 };
 use bitflags::bitflags;
 use std::{
@@ -24,14 +27,17 @@ bitflags! {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Instrument(pub(crate) Session);
+#[derive(Debug)]
+pub struct Instrument {
+    inner: Session,
+    pub identification: Identification,
+}
 
 impl Deref for Instrument {
     type Target = Session;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.inner
     }
 }
 
@@ -92,35 +98,29 @@ impl std::io::Read for &Instrument {
     }
 }
 
-impl IntoViSession for Instrument {
-    fn into_vi_session(self) -> ViSession {
-        self.0.into_vi_session()
-    }
-}
-
-impl AsViSession for Instrument {
-    fn as_vi_session(&self) -> ViSession {
-        self.0.as_vi_session()
-    }
-}
-
-impl FromViSession for Instrument {
-    unsafe fn from_vi_session(session: ViSession) -> Self {
-        unsafe { Self(FromViSession::from_vi_session(session)) }
-    }
-}
-
-// impl AsBorrowedSession for Instrument {
-//     fn as_borrowed_session(&self) -> crate::session::BorrowedSession<'_> {
-//         self.0.as_borrowed_session()
-//     }
-// }
-
 impl Instrument {
-    pub fn query(&mut self, buf: impl AsRef<[u8]>) -> Result<String> {
-        self.write(buf)?;
-        let response = self.read()?;
-        Ok(response)
+    pub fn new(session: Session) -> Result<Self> {
+        let mut instrument = Self {
+            inner: session,
+            identification: Identification {
+                manufacturer: "".into(),
+                model: "".into(),
+                serial_number: "".into(),
+                firmware_version: "".into(),
+            },
+        };
+        let identification = instrument.query_identification()?;
+        instrument.identification = identification;
+        Ok(instrument)
+    }
+
+    pub fn as_vi_session(&self) -> ViSession {
+        self.inner.as_vi_session()
+    }
+
+    pub fn write(&mut self, buf: impl AsRef<[u8]>) -> Result<()> {
+        self.write_all(buf.as_ref())?;
+        Ok(())
     }
 
     pub fn read(&self) -> Result<String> {
@@ -130,19 +130,20 @@ impl Instrument {
         Ok(buf)
     }
 
-    pub fn write(&mut self, buf: impl AsRef<[u8]>) -> Result<()> {
-        self.write_all(buf.as_ref())?;
-        Ok(())
+    pub fn query(&mut self, buf: impl AsRef<[u8]>) -> Result<String> {
+        self.write(buf)?;
+        let response = self.read()?;
+        Ok(response)
     }
 
-    // pub fn status_description(&self, error: VisaError) -> Result<()> {
-    //     let mut buf = String::new();
-    //     unsafe {
-    //         let status = viStatusDesc(self.as_vi_session(), error.into(), buf.as_mut_ptr() as _);
-    //         parse_vi_status(status)?;
-    //     }
-    //     Ok(())
-    // }
+    pub fn status_description(&self, error: VisaError) -> Result<()> {
+        let mut buf = String::new();
+        unsafe {
+            let status = viStatusDesc(self.as_vi_session(), error as _, buf.as_mut_ptr() as _);
+            parse_vi_status(status)?;
+        }
+        Ok(())
+    }
 
     pub fn lock(
         &self,
