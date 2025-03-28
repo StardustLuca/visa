@@ -14,7 +14,7 @@ visa = {version = "*"}
 ```
 
 ```Rust
-let resource_manager = ResourceManager::new().unwrap();
+let mut resource_manager = ResourceManager::new().unwrap();
 
 let mut instrument = resource_manager
     .open_with_identification(
@@ -27,7 +27,7 @@ let mut instrument = resource_manager
     )
     .unwrap();
 
-let identification = instrument.query_identification().unwrap();
+let identification = instrument.lock().unwrap().query_identification().unwrap();
 
 println!("{:?}", identification);
 ```

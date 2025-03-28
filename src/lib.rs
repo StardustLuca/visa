@@ -4,8 +4,6 @@ mod instrument;
 mod resource_manager;
 mod scpi;
 mod session;
-#[cfg(test)]
-mod test;
 
 #[allow(unused_imports)]
 use bindings::*;

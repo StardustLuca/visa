@@ -19,7 +19,7 @@ impl Drop for Session {
     fn drop(&mut self) {
         unsafe {
             let status = viClose(self.as_vi_session());
-            parse_vi_status(status).unwrap();
+            let _ = parse_vi_status(status);
         }
     }
 }
